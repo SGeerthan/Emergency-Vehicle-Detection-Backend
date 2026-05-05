@@ -54,7 +54,7 @@ RUN pip install --no-cache-dir --no-deps \
 # Install remaining requirements
 # Exclude packages controlled manually below
 # =========================
-RUN grep -vE '^(torch|torchvision|torchaudio|numpy|scipy|opencv-python-headless|opencv-python|Flask|flask-cors|gunicorn|requests|python-dotenv|pymongo)(==|>=|<=|~=|$)' requirements.txt > requirements.runtime.txt && \
+RUN grep -vE '^(torch|torchvision|torchaudio|numpy|scipy|opencv-python-headless|opencv-python|Flask|flask-cors|gunicorn|requests|python-dotenv|pymongo|sounddevice|soundfile)(==|>=|<=|~=|$)' requirements.txt > requirements.runtime.txt && \
     pip install --no-cache-dir -r requirements.runtime.txt
 
 # =========================
@@ -70,6 +70,8 @@ RUN pip install --no-cache-dir --force-reinstall \
     requests==2.32.5 \
     python-dotenv==1.2.2 \
     pymongo==4.16.0 \
+    sounddevice==0.5.5 \
+    soundfile==0.13.1 \
     opencv-python-headless==4.9.0.80
 
 # =========================
@@ -79,6 +81,8 @@ RUN python -c "import flask; print('flask installed')"
 RUN python -c "import requests; print('requests installed')"
 RUN python -c "from dotenv import load_dotenv; print('python-dotenv installed')"
 RUN python -c "import pymongo; print('pymongo installed')"
+RUN python -c "import sounddevice; print('sounddevice installed')"
+RUN python -c "import soundfile; print('soundfile installed')"
 RUN python -c "import cv2; print('cv2:', cv2.__version__)"
 RUN python -c "import numpy; print('numpy:', numpy.__version__)"
 RUN python -c "import gunicorn; print('gunicorn installed')"
