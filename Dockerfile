@@ -35,7 +35,7 @@ RUN pip install --no-cache-dir --upgrade pip
 
 # =========================
 # Core stable versions
-# Keep NumPy below 2 because OpenCV 4.9 and TensorFlow 2.15 need NumPy 1.x
+# NumPy must stay below 2 for OpenCV 4.9 and TensorFlow 2.15
 # =========================
 RUN pip install --no-cache-dir \
     numpy==1.26.4 \
@@ -43,7 +43,6 @@ RUN pip install --no-cache-dir \
 
 # =========================
 # CPU-only PyTorch
-# Installed separately to avoid heavy CUDA packages
 # =========================
 RUN pip install --no-cache-dir --no-deps \
     torch==2.2.2+cpu \
@@ -55,12 +54,12 @@ RUN pip install --no-cache-dir --no-deps \
 # Install remaining requirements
 # Exclude packages controlled manually below
 # =========================
-RUN grep -vE '^(torch|torchvision|torchaudio|numpy|scipy|opencv-python-headless|opencv-python|Flask|flask-cors|gunicorn|requests|python-dotenv)(==|>=|<=|~=|$)' requirements.txt > requirements.runtime.txt && \
+RUN grep -vE '^(torch|torchvision|torchaudio|numpy|scipy|opencv-python-headless|opencv-python|Flask|flask-cors|gunicorn|requests|python-dotenv|pymongo)(==|>=|<=|~=|$)' requirements.txt > requirements.runtime.txt && \
     pip install --no-cache-dir -r requirements.runtime.txt
 
 # =========================
 # Force install critical runtime packages
-# This fixes repeated Railway missing-module errors
+# Fixes repeated Railway missing-module errors
 # =========================
 RUN pip install --no-cache-dir --force-reinstall \
     numpy==1.26.4 \
@@ -70,15 +69,16 @@ RUN pip install --no-cache-dir --force-reinstall \
     gunicorn==23.0.0 \
     requests==2.32.5 \
     python-dotenv==1.2.2 \
+    pymongo==4.16.0 \
     opencv-python-headless==4.9.0.80
 
 # =========================
 # Verify important imports during build
-# If one is missing, build fails early instead of crashing after deployment
 # =========================
 RUN python -c "import flask; print('flask installed')"
 RUN python -c "import requests; print('requests installed')"
 RUN python -c "from dotenv import load_dotenv; print('python-dotenv installed')"
+RUN python -c "import pymongo; print('pymongo installed')"
 RUN python -c "import cv2; print('cv2:', cv2.__version__)"
 RUN python -c "import numpy; print('numpy:', numpy.__version__)"
 RUN python -c "import gunicorn; print('gunicorn installed')"
