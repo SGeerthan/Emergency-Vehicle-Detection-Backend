@@ -1,0 +1,51 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                         VM INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📍 NETWORK & ACCESS
+   Public IP Address:        172.168.19.116
+   Private IP Address:       10.0.0.4
+   Username:                 azureuser
+   SSH Port:                 22
+
+🖥️ HARDWARE SPECS
+   VM Name:                  EmergencyDetection
+   Size:                     Standard D2s v3
+   vCPUs:                    2
+   Memory (RAM):             8 GB
+   OS:                       Linux (Ubuntu 24.04)
+
+📍 LOCATION
+   Region:                   Southeast Asia (Zone 1)
+   Resource Group:           emergency-detection-rg
+   Virtual Network:          EmergencyDetection-vnet
+   Subnet:                   default
+
+⚡ STATUS
+   Agent Status:             Ready
+   Health State:             Not configured
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ssh -i "C:\path\to\your\ssh\key" azureuser@172.168.19.116
+
+curl http://172.168.19.116:5000/api/status
+
+cd C:\Users\sange\Desktop\Intergration
+scp -i "C:\path\to\your\ssh\key" -r . azureuser@172.168.19.116:~/emergency-detection/
+
+ssh -i "path\to\key" azureuser@172.168.19.116
+
+sudo apt update && sudo apt upgrade -y && sudo apt install -y python3.10 python3.10-venv python3-pip git libsm6 libxext6 libxrender-dev ffmpeg && mkdir -p ~/emergency-detection && cd ~/emergency-detection && python3.10 -m venv venv && source venv/bin/activate && pip install --upgrade pip
+
+scp -i "path\to\key" -r "C:\Users\sange\Desktop\Intergration\*" azureuser@172.168.19.116:~/emergency-detection/
+
+cd ~/emergency-detection && source venv/bin/activate && pip install -r requirements.txt
+
+python main.py
+
+
+
+
+
+give me a report how the deployment is done in here also about the project include like this The deployment of the Emergency Vehicle Detection System was a critical milestone in advancing smart city infrastructure and rapid emergency response capabilities. The primary goal was to provide a backend system capable of real-time video stream analysis, accurate classification of emergency vehicles (ambulances, fire trucks), and automated traffic signal pre-emption. This service plays a central role in intelligent traffic management, transforming complex visual data into actionable signals using a trained YOLOv8 object detection model. , live is cant done in live detection as i must deploy this porject i use upload option in the system design , also how the deployment and all the stuff , i want them to add in my report

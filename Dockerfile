@@ -3,16 +3,22 @@ FROM python:3.10-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (INCLUDING PortAudio)
 RUN apt-get update && apt-get install -y \
+    portaudio19-dev \
+    libasound2-dev \
     libsm6 \
     libxext6 \
     libxrender-dev \
     ffmpeg \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
 COPY requirements.txt .
+
+# Upgrade pip (important for some builds)
+RUN pip install --upgrade pip
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
@@ -26,7 +32,7 @@ RUN mkdir -p uploads
 # Expose port
 EXPOSE 5000
 
-# Set environment variables
+# Environment variables
 ENV FLASK_APP=main.py \
     FLASK_ENV=production \
     PYTHONUNBUFFERED=1
