@@ -29,9 +29,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 
 # =========================
-# Upgrade pip
+# Upgrade pip and install setuptools
+# pkg_resources comes from setuptools
 # =========================
-RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir setuptools==69.5.1
 
 # =========================
 # Core stable versions
@@ -54,7 +56,7 @@ RUN pip install --no-cache-dir --no-deps \
 # Install remaining requirements
 # Exclude packages controlled manually below
 # =========================
-RUN grep -vE '^(torch|torchvision|torchaudio|numpy|scipy|opencv-python-headless|opencv-python|Flask|flask-cors|gunicorn|requests|python-dotenv|pymongo|sounddevice|soundfile|tensorflow|keras|tensorflow-hub|tf-keras)(==|>=|<=|~=|$)' requirements.txt > requirements.runtime.txt && \
+RUN grep -vE '^(torch|torchvision|torchaudio|numpy|scipy|opencv-python-headless|opencv-python|Flask|flask-cors|gunicorn|requests|python-dotenv|pymongo|sounddevice|soundfile|tensorflow|keras|tensorflow-hub|tf-keras|setuptools)(==|>=|<=|~=|$)' requirements.txt > requirements.runtime.txt && \
     pip install --no-cache-dir -r requirements.runtime.txt
 
 # =========================
@@ -62,6 +64,7 @@ RUN grep -vE '^(torch|torchvision|torchaudio|numpy|scipy|opencv-python-headless|
 # Fixes repeated Railway missing-module errors
 # =========================
 RUN pip install --no-cache-dir --force-reinstall \
+    setuptools==69.5.1 \
     numpy==1.26.4 \
     scipy==1.11.4 \
     Flask==3.1.3 \
@@ -79,8 +82,19 @@ RUN pip install --no-cache-dir --force-reinstall \
     opencv-python-headless==4.9.0.80
 
 # =========================
+# Install PyTorch dependencies that were skipped by --no-deps
+# =========================
+RUN pip install --no-cache-dir \
+    filelock \
+    fsspec \
+    networkx \
+    sympy \
+    pillow==12.1.1
+
+# =========================
 # Verify important imports during build
 # =========================
+RUN python -c "import pkg_resources; print('pkg_resources installed')"
 RUN python -c "import flask; print('flask installed')"
 RUN python -c "import requests; print('requests installed')"
 RUN python -c "from dotenv import load_dotenv; print('python-dotenv installed')"
@@ -91,6 +105,7 @@ RUN python -c "import tensorflow as tf; print('tensorflow:', tf.__version__)"
 RUN python -c "import tensorflow_hub as hub; print('tensorflow-hub installed')"
 RUN python -c "import cv2; print('cv2:', cv2.__version__)"
 RUN python -c "import numpy; print('numpy:', numpy.__version__)"
+RUN python -c "import torch; print('torch:', torch.__version__)"
 RUN python -c "import gunicorn; print('gunicorn installed')"
 
 # =========================
