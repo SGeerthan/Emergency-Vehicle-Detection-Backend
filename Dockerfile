@@ -24,24 +24,29 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir --upgrade pip
 
-# CPU-only PyTorch
-RUN pip install --no-cache-dir \
+# Install NumPy first and keep it below 2
+RUN pip install --no-cache-dir numpy==1.26.4
+
+# Install CPU-only PyTorch without allowing it to change NumPy
+RUN pip install --no-cache-dir --no-deps \
     torch==2.2.2+cpu \
     torchvision==0.17.2+cpu \
     torchaudio==2.2.2+cpu \
     --index-url https://download.pytorch.org/whl/cpu
 
-# Install all other requirements except torch packages
-RUN grep -vE '^(torch|torchvision|torchaudio)(==|>=|<=|~=|$)' requirements.txt > requirements.runtime.txt && \
+# Install all other requirements except torch/torchvision/torchaudio/numpy/opencv
+RUN grep -vE '^(torch|torchvision|torchaudio|numpy|opencv-python-headless|opencv-python)(==|>=|<=|~=|$)' requirements.txt > requirements.runtime.txt && \
     pip install --no-cache-dir -r requirements.runtime.txt
 
-# Force install important runtime packages
-RUN pip install --no-cache-dir \
-    gunicorn==23.0.0 \
-    opencv-python-headless==4.9.0.80
+# Force stable NumPy + OpenCV + Gunicorn versions
+RUN pip install --no-cache-dir --force-reinstall \
+    numpy==1.26.4 \
+    opencv-python-headless==4.9.0.80 \
+    gunicorn==23.0.0
 
 # Verify critical imports during build
-RUN python -c "import cv2; print('cv2 installed:', cv2.__version__)"
+RUN python -c "import numpy; print('numpy:', numpy.__version__)"
+RUN python -c "import cv2; print('cv2:', cv2.__version__)"
 RUN python -c "import gunicorn; print('gunicorn installed')"
 
 COPY . .
