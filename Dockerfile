@@ -22,18 +22,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 
-# Install CPU-only Torch first, then install the rest of requirements
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir \
-        torch==2.2.2+cpu \
-        torchvision==0.17.2+cpu \
-        torchaudio==2.2.2+cpu \
-        --index-url https://download.pytorch.org/whl/cpu && \
-    grep -vE '^(torch|torchvision|torchaudio)(==|>=|<=|~=|$)' requirements.txt > requirements.runtime.txt && \
+RUN pip install --no-cache-dir --upgrade pip
+
+# Install CPU-only Torch first
+RUN pip install --no-cache-dir \
+    torch==2.2.2+cpu \
+    torchvision==0.17.2+cpu \
+    torchaudio==2.2.2+cpu \
+    --index-url https://download.pytorch.org/whl/cpu
+
+# Install other requirements except torch packages
+RUN grep -vE '^(torch|torchvision|torchaudio)(==|>=|<=|~=|$)' requirements.txt > requirements.runtime.txt && \
     pip install --no-cache-dir -r requirements.runtime.txt
+
+# Force install gunicorn in case requirements install misses it
+RUN pip install --no-cache-dir gunicorn==23.0.0
 
 COPY . .
 
 RUN mkdir -p uploads
 
-CMD exec gunicorn --bind "0.0.0.0:${PORT:-5000}" --workers 1 --threads 2 --timeout 180 main:app
+CMD exec python -m gunicorn --bind "0.0.0.0:${PORT:-5000}" --workers 1 --threads 2 --timeout 180 main:app
