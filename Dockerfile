@@ -1,17 +1,18 @@
 FROM python:3.10-slim
 
-# Set working directory
 WORKDIR /app
 
-# =========================
-# System dependencies
-# =========================
-RUN apt-get update && apt-get install -y \
+ENV PYTHONUNBUFFERED=1
+ENV TF_ENABLE_ONEDNN_OPTS=0
+ENV FLASK_ENV=production
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
     portaudio19-dev \
     libasound2-dev \
     libsm6 \
     libxext6 \
     libxrender-dev \
+    libgl1 \
     libglib2.0-0 \
     libgomp1 \
     ffmpeg \
@@ -19,41 +20,20 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# =========================
-# Install Python dependencies
-# =========================
 COPY requirements.txt .
 
-RUN pip install --upgrade pip
+# Install CPU-only Torch first, then install the rest of requirements
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+        torch==2.2.2+cpu \
+        torchvision==0.17.2+cpu \
+        torchaudio==2.2.2+cpu \
+        --index-url https://download.pytorch.org/whl/cpu && \
+    grep -vE '^(torch|torchvision|torchaudio)(==|>=|<=|~=|$)' requirements.txt > requirements.runtime.txt && \
+    pip install --no-cache-dir -r requirements.runtime.txt
 
-# FIX: ensure torch installs cleanly before others (important for YOLO)
-RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-
-RUN pip install --no-cache-dir -r requirements.txt
-
-# =========================
-# Copy application
-# =========================
 COPY . .
 
-# Create uploads folder
 RUN mkdir -p uploads
 
-# =========================
-# Environment variables
-# =========================
-ENV FLASK_APP=main.py \
-    FLASK_ENV=production \
-    PYTHONUNBUFFERED=1 \
-    TF_ENABLE_ONEDNN_OPTS=0
-
-# =========================
-# Health check
-# =========================
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:5000/api/status')"
-
-# =========================
-# Run app
-# =========================
-CMD ["python", "main.py"]
+CMD exec gunicorn --bind "0.0.0.0:${PORT:-5000}" --workers 1 --threads 2 --timeout 180 main:app
