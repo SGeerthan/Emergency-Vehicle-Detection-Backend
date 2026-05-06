@@ -26,6 +26,7 @@ graph TD
         MAIN[main.py / Flask API]
         DASH[Dashboard / Frontend]
     end
+    
 
     MIC --> AH
     CAM --> VH
