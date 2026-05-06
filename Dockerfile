@@ -5,13 +5,14 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 ENV TF_ENABLE_ONEDNN_OPTS=0
 ENV FLASK_ENV=production
+ENV ENABLE_AUDIO=false
+ENV ENABLE_LIVE_CAMERA=false
+ENV ENABLE_VIDEO_UPLOAD=true
 
 # =========================
 # System dependencies
 # =========================
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    portaudio19-dev \
-    libasound2-dev \
     libsm6 \
     libxext6 \
     libxrender-dev \
@@ -24,89 +25,47 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # =========================
-# Copy requirements
+# Copy requirements (must be UTF-8!)
 # =========================
 COPY requirements.txt .
 
 # =========================
-# Upgrade pip and install setuptools
-# pkg_resources comes from setuptools
+# Install Python packages
 # =========================
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir setuptools==69.5.1
 
-# =========================
-# Core stable versions
-# NumPy must stay below 2 for OpenCV 4.9 and TensorFlow 2.15
-# =========================
+# Install NumPy first (required by OpenCV and ultralytics)
 RUN pip install --no-cache-dir \
     numpy==1.26.4 \
     scipy==1.11.4
 
-# =========================
-# CPU-only PyTorch
-# =========================
-RUN pip install --no-cache-dir --no-deps \
+# CPU-only PyTorch (required by ultralytics/YOLO)
+RUN pip install --no-cache-dir \
     torch==2.2.2+cpu \
     torchvision==0.17.2+cpu \
-    torchaudio==2.2.2+cpu \
     --index-url https://download.pytorch.org/whl/cpu
 
-# =========================
 # Install remaining requirements
-# Exclude packages controlled manually below
-# =========================
-RUN grep -vE '^(torch|torchvision|torchaudio|numpy|scipy|opencv-python-headless|opencv-python|Flask|flask-cors|gunicorn|requests|python-dotenv|pymongo|sounddevice|soundfile|tensorflow|keras|tensorflow-hub|tf-keras|setuptools)(==|>=|<=|~=|$)' requirements.txt > requirements.runtime.txt && \
-    pip install --no-cache-dir -r requirements.runtime.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# =========================
-# Force install critical runtime packages
-# Fixes repeated Railway missing-module errors
-# =========================
-RUN pip install --no-cache-dir --force-reinstall \
-    setuptools==69.5.1 \
-    numpy==1.26.4 \
-    scipy==1.11.4 \
-    Flask==3.1.3 \
-    flask-cors==6.0.2 \
-    gunicorn==23.0.0 \
-    requests==2.32.5 \
-    python-dotenv==1.2.2 \
-    pymongo==4.16.0 \
-    sounddevice==0.5.5 \
-    soundfile==0.13.1 \
-    tensorflow==2.15.0 \
-    keras==2.15.0 \
-    tensorflow-hub==0.16.1 \
-    tf-keras==2.15.0 \
-    opencv-python-headless==4.9.0.80
-
-# =========================
-# Install PyTorch dependencies that were skipped by --no-deps
-# =========================
+# Install PyTorch sub-dependencies that --no-deps would skip
 RUN pip install --no-cache-dir \
     filelock \
     fsspec \
     networkx \
-    sympy \
-    pillow==12.1.1
+    sympy
 
 # =========================
-# Verify important imports during build
+# Verify critical imports
 # =========================
-RUN python -c "import pkg_resources; print('pkg_resources installed')"
-RUN python -c "import flask; print('flask installed')"
-RUN python -c "import requests; print('requests installed')"
-RUN python -c "from dotenv import load_dotenv; print('python-dotenv installed')"
-RUN python -c "import pymongo; print('pymongo installed')"
-RUN python -c "import sounddevice; print('sounddevice installed')"
-RUN python -c "import soundfile; print('soundfile installed')"
-RUN python -c "import tensorflow as tf; print('tensorflow:', tf.__version__)"
-RUN python -c "import tensorflow_hub as hub; print('tensorflow-hub installed')"
+RUN python -c "import flask; print('flask:', flask.__version__)"
 RUN python -c "import cv2; print('cv2:', cv2.__version__)"
 RUN python -c "import numpy; print('numpy:', numpy.__version__)"
 RUN python -c "import torch; print('torch:', torch.__version__)"
-RUN python -c "import gunicorn; print('gunicorn installed')"
+RUN python -c "import gunicorn; print('gunicorn OK')"
+RUN python -c "import pymongo; print('pymongo OK')"
+RUN python -c "from dotenv import load_dotenv; print('dotenv OK')"
 
 # =========================
 # Copy application files
@@ -114,11 +73,39 @@ RUN python -c "import gunicorn; print('gunicorn installed')"
 COPY . .
 
 # =========================
-# Create upload folder
+# Create required directories
 # =========================
 RUN mkdir -p uploads
 
 # =========================
-# Run app with Railway PORT
+# Download YOLO model if URL is provided
+# If you host bestAllVehicle.pt on cloud storage,
+# uncomment and set the URL:
 # =========================
-CMD exec python -m gunicorn --bind "0.0.0.0:${PORT:-5000}" --workers 1 --threads 2 --timeout 180 main:app
+# ARG MODEL_URL=""
+# RUN if [ -n "$MODEL_URL" ]; then \
+#       pip install --no-cache-dir gdown 2>/dev/null || true; \
+#       python -c "import urllib.request; urllib.request.urlretrieve('${MODEL_URL}', 'bestAllVehicle.pt')" \
+#       && echo "[INFO] Model downloaded successfully" \
+#       || echo "[WARNING] Model download failed"; \
+#     fi
+
+# =========================
+# Expose port (Railway sets PORT dynamically)
+# =========================
+EXPOSE ${PORT:-5000}
+
+# =========================
+# Start with gunicorn via wsgi.py
+# - 1 worker (ML models are memory-heavy)
+# - 2 threads (handle concurrent API requests)
+# - 180s timeout (video uploads can be large)
+# =========================
+CMD exec python -m gunicorn \
+    --bind "0.0.0.0:${PORT:-5000}" \
+    --workers 1 \
+    --threads 2 \
+    --timeout 180 \
+    --access-logfile - \
+    --error-logfile - \
+    wsgi:app

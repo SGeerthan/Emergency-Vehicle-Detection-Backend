@@ -6,6 +6,11 @@ from pymongo import MongoClient
 
 load_dotenv()
 
+# Cloud deployment flags
+ENABLE_AUDIO = os.getenv("ENABLE_AUDIO", "false").lower() == "true"
+ENABLE_LIVE_CAMERA = os.getenv("ENABLE_LIVE_CAMERA", "false").lower() == "true"
+ENABLE_VIDEO_UPLOAD = os.getenv("ENABLE_VIDEO_UPLOAD", "true").lower() == "true"
+
 def get_current_location():
     try:
         response = requests.get("https://ipinfo.io/json", timeout=5)
@@ -24,7 +29,7 @@ def get_current_location():
 # CONFIGURATION
 # =====================================================
 
-LOCATION = get_current_location()
+LOCATION = os.getenv("LOCATION", "Unknown Location")
 
 # Audio Config
 SAMPLE_RATE = 16000
@@ -146,7 +151,7 @@ DB_NAME = os.getenv("DB_NAME")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME")
 
 # SMS API Config (Get your API Key from https://dashboard.smsapi.lk/)
-SMS_API_KEY = os.getenv("SMS_API_KEY", "370|bwsnjGSnYYRO1KwABpyX1yqrpWxzSsHlUnGdUAXU")
+SMS_API_KEY = os.getenv("SMS_API_KEY", "")
 # SENDER_ID is the "From" name that appears on the phone (e.g., 'SmsPlus')
 SMS_SENDER_ID = os.getenv("SMS_SENDER_ID", "TRAFFIXION")
 SMS_GATEWAY_URL = "https://dashboard.smsapi.lk/api/v3/sms/send"

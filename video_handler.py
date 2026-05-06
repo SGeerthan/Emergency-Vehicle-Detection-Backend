@@ -9,11 +9,24 @@ import db_handler
 import time
 
 # Initialization
-print("[INFO] Loading YOLO model...")
-yolo_model = YOLO(config.MODEL_PATH)
+import os
+# Guard YOLO model load
+yolo_model = None
+if os.path.exists(config.MODEL_PATH):
+    print("[INFO] Loading YOLO model...")
+    yolo_model = YOLO(config.MODEL_PATH)
+    print("[INFO] YOLO model loaded.")
+else:
+    print(f"[WARNING] YOLO model not found at {config.MODEL_PATH}. Detection disabled.")
 
-print("[INFO] Loading OCR model...")
-ocr_reader = easyocr.Reader(['en'])
+# Guard EasyOCR load
+ocr_reader = None
+try:
+    print("[INFO] Loading OCR model...")
+    ocr_reader = easyocr.Reader(['en'])
+    print("[INFO] OCR model loaded.")
+except Exception as e:
+    print(f"[WARNING] OCR disabled: {e}")
 
 # Emergency Vehicle Classes from bestAllVehicle.pt
 EMERGENCY_VEHICLE_CLASSES = ['ambulance', 'firetruck', 'police']
@@ -42,6 +55,8 @@ def get_color_mask(hsv, bright_mask):
     return red_mask, blue_mask, amber_mask
 
 def run_ocr(crop):
+    if ocr_reader is None:
+        return []
     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
     gray = cv2.equalizeHist(gray)
     results = ocr_reader.readtext(gray)
@@ -54,6 +69,10 @@ def run_ocr(crop):
 
 def video_processing_loop(source, view_name):
     """
+    # Guard YOLO model loading
+    if yolo_model is None:
+        print(f"[WARNING] Skipping {view_name} — no YOLO model loaded.")
+        return
     source can be a camera index (int) or a file path (string).
     """
     cap = cv2.VideoCapture(source)
@@ -268,9 +287,9 @@ def video_processing_loop(source, view_name):
             config.upload_top_processed_frame = frame.copy()
         
         if not is_file:
-            if cv2.waitKey(1) & 0xFF == ord('q'): break
+            time.sleep(0.001)  # non‑blocking yield
         else:
-             if cv2.waitKey(delay) & 0xFF == ord('q'): break
+            time.sleep(delay / 1000.0)  # maintain original delay
         
     cap.release()
     # cv2.destroyAllWindows()
