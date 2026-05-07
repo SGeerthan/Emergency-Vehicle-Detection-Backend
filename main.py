@@ -22,6 +22,10 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 CORS(app)
 
+@app.route("/")
+def health_check():
+    return jsonify({"status": "ok", "service": "Emergency Vehicle Detection API"}), 200
+
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -172,7 +176,8 @@ def video_feed_upload_top():
     return Response(gen_frames("upload_top"), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 def run_flask():
-    app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
 
 
 def decision_logic_loop():
